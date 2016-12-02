@@ -8,6 +8,7 @@ import urllib.request
 import json
 import sys
 
+# Bot Configuration
 settings = {
 	'DiscordGuildToken': 'MjU0MDc5NTc0NTEyNTAwNzM2.CyJ2MQ.maZ_XZBAeCchFfDpLzM-JtOroJY',
 	'BlizzardAPIKey': 'tmmf988hfysd6x4yuvwedypyxjcqd6pc',
@@ -17,9 +18,11 @@ settings = {
 	'LogFile': 'warcraft-discord-bot.log'
 }
 
+# Globals
 logger = ''
 client = discord.Client()
 cache = {}
+qualityColours = [ 0xCCCCCC, 0xFFFFFF, 0x00FF00, 0x0000FF, 0xB833FF, 0xFFC300 ]
 
 def setupLogging():
 	global settings, logger
@@ -115,6 +118,18 @@ def getCharacterGear(name, realm):
 		logger.warning('The Blizzard API server was unavailable: %s.' % e.reason)
 		return "The Blizzard API server is unavailable, sorry: %s." % e.reason
 
+def renderCharacterItems(characterData):
+	global cache, logger, qualityColours
+	if 'items' not in characterData.keys():
+		return None
+	items = []
+	baseIconURL = 'http://media.blizzard.com/wow/icons/56/'
+	for item in characterData['items']:
+		em = discord.Embed(title=item['name'], description='ilvl %s' % item['itemLevel'], colour=qualityColours[item['quality']], url='')
+		em.set_thumbnail(url='%s%s.png' % (baseIconURL, item['icon']))
+		items.append(em)
+	return items
+	
 async def bgRefreshCache_task():
 	global settings, logger, client
 	await client.wait_until_ready()
@@ -164,9 +179,9 @@ async def on_message(message):
 				# Summary announcement
 				await client.send_message(message.channel, "**%s** from *%s* is a level %s %s %s with an average item level of %s." % (data['name'], data['realm'], data['level'], cache['races'][data['race']]['name'], cache['classes'][data['class']]['name'], data['items']['averageItemLevel']), tts=True)
 				# Detail pane
-				em = discord.Embed(title='title', description='description', colour=0xffffff)
-				em.set_author(name=data['name'], icon_url='http://render-api-us.worldofwarcraft.com/static-render/us/%s' % data['thumbnail'])
-				await client.send_message(message.channel, embed=em)
+				#em = discord.Embed(title='title', description='description', colour=0xffffff)
+				#em.set_author(name=data['name'], icon_url='http://render-api-us.worldofwarcraft.com/static-render/us/%s' % data['thumbnail'])
+				await client.send_message(message.channel, embeds=renderCharacterItems(data))
 			else:
 				await client.send_message(message.channel, data)
 
